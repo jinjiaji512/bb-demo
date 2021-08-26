@@ -51,18 +51,21 @@ func NewWorld() {
 	BeginGamePlan()
 
 	sort.Sort(&TotalPlayers)
-	for _, v := range TotalPlayers[:10] {
+	for _, v := range TotalPlayers {
 		v.Show()
 	}
 
 }
 
 func GenGamePlan() {
-	for _, v1 := range Teams {
-		for _, v2 := range Teams {
+	for i := 0; i < len(Teams); i++ {
+		for j := i + 1; j < len(Teams); j++ {
+			v1 := Teams[i]
+			v2 := Teams[j]
 			GamePlan = append(GamePlan, &Game{
-				Status: 0,
-				Teams:  [2]*Team{v1, v2},
+				Status:  0,
+				Teams:   [2]*Team{v1, v2},
+				ShowLog: false,
 			})
 		}
 	}

@@ -390,13 +390,13 @@ func (p *Player) Show() {
 	fmt.Println(comment)
 
 	fmt.Println(p.Name, "球员数据：\n位置\t球员\t得分\t命中率\t篮板\t盖帽")
-	fmt.Printf("%s\t%s\t%.2f\t%.2f\t%d\t%d\n",
+	fmt.Printf("%s\t%s\t%.2f\t%.2f\t%.2f\t%.2f\n",
 		PositionM[p.Position],
 		p.Name,
 		p.Data.ScorePG,
 		p.Data.FG,
-		p.Data.Reb,
-		p.Data.Block,
+		float32(p.Data.Reb)/float32(p.Data.GameCount),
+		float32(p.Data.Block)/float32(p.Data.GameCount),
 	)
 
 }
