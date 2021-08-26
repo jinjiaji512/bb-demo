@@ -9,7 +9,9 @@
 package world
 
 type Team struct {
-	Name     string
-	Players  []*Player
-	WinCount int
+	Name         string
+	Players      []*Player
+	WinCount     int
+	LostCount    int
+	CurrGameTeam map[Position]*Player
 }
