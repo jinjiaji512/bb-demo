@@ -14,4 +14,17 @@ type Team struct {
 	WinCount     int
 	LostCount    int
 	CurrGameTeam map[Position]*Player
+	Data         *Data
+}
+
+type TeamList []*Team
+
+func (l TeamList) Swap(i, j int) {
+	l[i], l[j] = l[j], l[i]
+}
+func (l TeamList) Less(i, j int) bool {
+	return l[i].Data.WinCount > l[j].Data.WinCount
+}
+func (l TeamList) Len() int {
+	return len(l)
 }

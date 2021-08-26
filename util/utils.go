@@ -13,7 +13,6 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
-	"time"
 )
 
 var lastName = []string{
@@ -57,7 +56,6 @@ var lastNameLen = len(lastName)
 var firstNameLen = len(firstName)
 
 func GetFullName() string {
-	rand.Seed(time.Now().UnixNano())     //设置随机数种子
 	var first string                     //名
 	for i := 0; i <= rand.Intn(2); i++ { //随机产生2位或者3位的名
 		first += firstName[rand.Intn(int(NormalFloat(0, float32(firstNameLen-1)/2, float32(1), float32(firstNameLen-1))))]

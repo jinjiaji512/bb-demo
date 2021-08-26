@@ -10,7 +10,6 @@ package world
 
 import (
 	utils "bb/util"
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -38,6 +37,7 @@ const (
 
 type Player struct {
 	Name     string
+	FullName string
 	Birthday time.Time
 	Position Position
 	Team     *Team `json:"-"`
@@ -76,15 +76,17 @@ type Player struct {
 	TendencyBlock   float64
 	TendencyRebound float64
 
-	Score float64
+	Score   float64
+	Comment string
 
-	Data *PlayerData
+	Data *Data
 }
 
-type PlayerData struct {
+type Data struct {
 	Score     int
 	ScorePG   float32
 	GameCount int
+	WinCount  int
 	FG        float32
 	Shoot     int
 	ShootIn   int
@@ -95,8 +97,7 @@ type PlayerData struct {
 
 func NewPlayer(position Position) *Player {
 	var player Player
-	player.Data = &PlayerData{}
-
+	player.Data = &Data{}
 	player.Name = utils.GetFullName()
 	age := utils.NormalFloat(30, 15, 18, 42)
 	player.Birthday = time.Now().Add(-time.Hour * 24 * 365 * time.Duration(age))
@@ -108,24 +109,24 @@ func NewPlayer(position Position) *Player {
 	radAgile := utils.NormalFloat(float32(60-20*radHW-20*radH), 10, 40, 100) / 100
 	radEnergy := utils.NormalFloat(float32(30+40*radStrong+30*radAgile), 10, 40, 100) / 100
 
-	player.Height = utils.Decimal(180+6*float64(position)+15*radH, 2)
+	player.Height = utils.Decimal(170+6*float64(position)+15*radH, 2)
 	player.Weight = utils.Decimal(player.Height*player.Height*25/10000+20*radHW, 2)
 	player.Strong = utils.Decimal(100*radStrong, 2)
 	player.Agile = utils.Decimal(100*radAgile, 2)
 	player.Energy = utils.Decimal(100*radEnergy, 2)
 
-	player.SkillShoot = utils.Decimal(utils.NormalFloat(float32(20+60*radAgile+40*radH), 20, 0, 100), 2)
-	player.SkillInShoot = utils.Decimal(utils.NormalFloat(float32(20+60*radStrong+40*radH), 10, 0, 100), 2)
+	player.SkillShoot = utils.Decimal(utils.NormalFloat(float32(20+40*radAgile+40*radH), 20, 0, 100), 2)
+	player.SkillInShoot = utils.Decimal(utils.NormalFloat(float32(20+40*radStrong+40*radH), 10, 0, 100), 2)
 	player.SkillPass = utils.Decimal(utils.NormalFloat(float32(20+90*radAgile), 20, 0, 100), 2)
 	player.SkillMove = utils.Decimal(utils.NormalFloat(float32(20+90*radAgile), 20, 0, 100), 2)
 	player.SkillDribble = utils.Decimal(utils.NormalFloat(float32(20+90*radAgile-10*radH), 20, 0, 100), 2)
 
-	player.SkillDefence = utils.Decimal(utils.NormalFloat(float32(40+30*radAgile+30*radStrong+40*radH), 40, 0, 100), 2)
-	player.SkillSteal = utils.Decimal(utils.NormalFloat(float32(40+40*radAgile+20*radStrong-40*radH), 40, 0, 100), 2)
-	player.SkillBlock = utils.Decimal(utils.NormalFloat(float32(40+30*radAgile+30*radStrong+40*radH), 40, 0, 100), 2)
-	player.SkillRebound = utils.Decimal(utils.NormalFloat(float32(40+30*radAgile+30*radStrong+40*radH), 40, 0, 100), 2)
+	player.SkillDefence = utils.Decimal(utils.NormalFloat(float32(20+30*radAgile+30*radStrong+40*radH), 40, 0, 100), 2)
+	player.SkillSteal = utils.Decimal(utils.NormalFloat(float32(20+40*radAgile+20*radStrong-40*radH), 40, 0, 100), 2)
+	player.SkillBlock = utils.Decimal(utils.NormalFloat(float32(20+10*radAgile+10*radStrong+10*radH+10*float64(position)), 10, 0, 100), 2)
+	player.SkillRebound = utils.Decimal(utils.NormalFloat(float32(20+10*radAgile+10*radStrong+10*radH+10*float64(position)), 10, 0, 100), 2)
 
-	player.TendencyShoot = utils.Decimal(utils.NormalFloat(float32((player.SkillShoot+player.SkillInShoot)/2), 20, 0, 100), 2)
+	player.TendencyShoot = utils.Decimal(utils.NormalFloat(float32(player.SkillInShoot+player.SkillShoot)/2, 20, 0, 100), 2)
 	player.TendencyPass = utils.Decimal(utils.NormalFloat(float32(player.SkillPass), 20, 0, 100), 2)
 	player.TendencyDribble = utils.Decimal(utils.NormalFloat(float32(player.SkillDribble), 20, 0, 100), 2)
 
@@ -135,6 +136,8 @@ func NewPlayer(position Position) *Player {
 	player.TendencyRebound = utils.Decimal(utils.NormalFloat(float32(player.SkillRebound), 20, 0, 100), 2)
 
 	player.GenScore()
+	player.GenConment()
+	player.GenName()
 	return &player
 }
 
@@ -161,12 +164,22 @@ func (p *Player) GenScore() {
 	p.Score = utils.Decimal(p.Score, 2)
 }
 
-var PositionM = map[Position]string{1: "控球后卫", 2: "得分后卫", 3: "小前锋", 4: "大前锋", 5: "中锋"}
+var PositionM = map[Position]string{1: "PG", 2: "SG", 3: "SF", 4: "PF", 5: "C"}
 
 func (p *Player) Show() {
-	bs, _ := json.MarshalIndent(p, "", "\t")
-	fmt.Println(string(bs))
+	//bs, _ := json.MarshalIndent(p, "", "\t")
+	//fmt.Println(string(bs))
+	fmt.Println("---------------------------------------")
 
+	fmt.Println()
+	fmt.Println()
+}
+
+func (p *Player) GenName() {
+	p.FullName = "(" + p.Name + "-" + PositionM[p.Position] + "-" + strconv.Itoa(int(p.Score)) + ")"
+}
+
+func (p *Player) GenConment() {
 	comment := "球员档案：\n姓名：" + p.Name + "\n今年" + strconv.Itoa(time.Now().Year()-p.Birthday.Year()) + "岁,司职" +
 		PositionM[p.Position] + "，评分：" + strconv.Itoa(int(p.Score)) + "\n个人标签："
 
@@ -387,17 +400,7 @@ func (p *Player) Show() {
 		comment += "防守能力非常差。"
 	}
 
-	fmt.Println(comment)
-
-	fmt.Println(p.Name, "球员数据：\n位置\t球员\t得分\t命中率\t篮板\t盖帽")
-	fmt.Printf("%s\t%s\t%.2f\t%.2f\t%.2f\t%.2f\n",
-		PositionM[p.Position],
-		p.Name,
-		p.Data.ScorePG,
-		p.Data.FG,
-		float32(p.Data.Reb)/float32(p.Data.GameCount),
-		float32(p.Data.Block)/float32(p.Data.GameCount),
-	)
+	p.Comment = comment
 
 }
 
@@ -449,7 +452,7 @@ func (l PlayerList) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
 }
 func (l PlayerList) Less(i, j int) bool {
-	return l[i].Data.Score > l[j].Data.Score
+	return l[i].Data.Reb > l[j].Data.Reb
 }
 func (l PlayerList) Len() int {
 	return len(l)

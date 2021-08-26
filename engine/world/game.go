@@ -11,8 +11,8 @@ package world
 import (
 	utils "bb/util"
 	"fmt"
+	"math"
 	"math/rand"
-	"time"
 )
 
 type Game struct {
@@ -67,7 +67,16 @@ func (g *Game) Show() {
 
 func (g *Game) WriteLog(msg string) {
 	if g.ShowLog {
+		//time.Sleep(time.Millisecond*10)
 		g.GameResult.gameResultChan <- msg
+		if msg == "over" {
+			var s string
+			fmt.Println("push down any key continue")
+			if _, err := fmt.Scanln(&s); err != nil {
+				fmt.Println(err)
+			}
+			fmt.Println("continue")
+		}
 	}
 }
 
@@ -102,7 +111,7 @@ func (g *Game) Play() {
 			}
 		}
 	}
-	for i := 0; i < 140; i++ {
+	for i := 0; i < 160; i++ {
 		attackTeam := g.Teams[i%2]
 		defenceTeam := g.Teams[(i+1)%2]
 
@@ -113,24 +122,34 @@ func (g *Game) Play() {
 		defencePlayer := defenceTeam.CurrGameTeam[PG]
 
 		//当前回合有10次小回合
-		rand.Seed(time.Now().UnixNano())
-		g.WriteLog(attackTeam.Name + "队持球")
-		g.WriteLog(g.Teams[i%2].Name)
+		g.WriteLog(attackTeam.Name + "队持球进攻")
 		for j := 0; j < 10; j++ {
 			attackPlayerResult := attackTeamResult.GamePlayerResult[attackPlayer]
 			defencePlayerResult := defenceTeamResult.GamePlayerResult[defencePlayer]
 
+			shoot := math.Max(attackPlayer.SkillShoot, attackPlayer.SkillInShoot)
+			//if attackPlayer.Position >= PF {
+			//	shoot = attackPlayer.SkillInShoot
+			//}
+
 			//是否投篮
-			if attackPlayer.TendencyShoot*float64(j) > float64(rand.Int31n(500)) || j == int(rand.Int31n(10)) {
+			if (attackPlayer.TendencyShoot+2*float64(shoot-defencePlayer.SkillDefence))*float64(j)/5 > float64(rand.Int31n(100)) || j == int(rand.Int31n(10)) {
 				attackPlayerResult.Shoot++
 				attackTeamResult.Shoot++
-				g.WriteLog(attackPlayer.Name + "选择投篮，防守他的是" + defencePlayer.Name)
+				g.WriteLog(attackPlayer.FullName + "选择投篮，防守他的是" + defencePlayer.FullName)
 				//盖帽
-				if (defencePlayer.SkillBlock-80)*2+2*(defencePlayer.Height-attackPlayer.Height) >
+				if 10+(defencePlayer.SkillBlock-90)/5+1*(defencePlayer.Height-attackPlayer.Height)/2 >
 					float64(rand.Int31n(100)) {
 					defencePlayerResult.Block++
 					defenceTeamResult.Block++
-					g.WriteLog(attackPlayer.Name + "投篮被" + defencePlayer.Name + "盖了")
+					g.WriteLog(attackPlayer.FullName + "投篮被" + defencePlayer.FullName + "盖了")
+
+					//出界
+					if 30 > rand.Int31n(100) {
+						g.WriteLog("出界，继续获得球权")
+						continue
+					}
+
 					//篮板,所有人随机
 					var attGetReb bool
 					for ok := false; !ok; {
@@ -145,13 +164,13 @@ func (g *Game) Play() {
 								defencePlayer = defenceTeam.CurrGameTeam[p.Position]
 								attackTeamResult.Reb++
 								attackTeamResult.GamePlayerResult[attackPlayer].Reb++
-								g.WriteLog("进攻方的" + p.Name + "拿到篮板")
+								g.WriteLog("进攻方的" + p.FullName + "拿到篮板")
 							} else {
 								//对方拿到
 								attGetReb = false
 								defenceTeamResult.Reb++
 								defenceTeamResult.GamePlayerResult[p].Reb++
-								g.WriteLog("防守方的" + p.Name + "拿到篮板")
+								g.WriteLog("防守方的" + p.FullName + "拿到篮板")
 							}
 							break
 						}
@@ -165,22 +184,26 @@ func (g *Game) Play() {
 					}
 				}
 
-				if (attackPlayer.SkillShoot-defencePlayer.SkillDefence)+40 > float64(rand.Int31n(100)) {
+				if 25+(shoot-defencePlayer.SkillDefence)/2+(shoot-90)*1+(attackPlayer.Height-190) > float64(rand.Int31n(100)) {
 					//进
 					attackPlayerResult.ShootIn++
 					attackTeamResult.ShootIn++
 					attackPlayerResult.Score += 2
 					attackTeamResult.Score += 2
-					g.WriteLog("球进了！" + attackPlayer.Name + "获得2分")
+					g.WriteLog("球进了！" + attackPlayer.FullName + "获得2分")
 					break
 				} else {
 					//不进
-					//篮板
+					//出界
+					if 30 > rand.Int31n(100) {
+						g.WriteLog("出界，交换球权")
+						break
+					}
 					//篮板,从c至pg随机
 					var attGetReb bool
 					for ok := false; !ok; {
 						randT := rand.Int31n(2)
-						randP := utils.NormalFloat(5, 2, 1.1, 5.9)
+						randP := utils.NormalFloat(5, 5, 1.1, 5.9)
 						p := g.Teams[randT].CurrGameTeam[Position(randP)]
 						if p.SkillRebound > float64(rand.Int31n(100)) {
 							if attackTeam == g.Teams[randT] {
@@ -190,13 +213,13 @@ func (g *Game) Play() {
 								defencePlayer = defenceTeam.CurrGameTeam[p.Position]
 								attackTeamResult.Reb++
 								attackTeamResult.GamePlayerResult[attackPlayer].Reb++
-								g.WriteLog("球不进，不过己方的" + p.Name + "拿到篮板")
+								g.WriteLog("球不进，不过己方的" + p.FullName + "拿到篮板")
 							} else {
 								//对方拿到
 								attGetReb = false
 								defenceTeamResult.Reb++
 								defenceTeamResult.GamePlayerResult[p].Reb++
-								g.WriteLog("球不进，被对方的" + p.Name + "拿到篮板")
+								g.WriteLog("球不进，被对方的" + p.FullName + "拿到篮板")
 							}
 							break
 						}
@@ -212,15 +235,27 @@ func (g *Game) Play() {
 			}
 
 			//是否传球
-			if j == 0 || attackPlayer.TendencyPass > float64(rand.Int31n(100)) {
-				lastAttackPlayer := attackPlayer
+			passok := false
+			for k := 0; k < 10; k++ {
+				//lastAttackPlayer := attackPlayer
 				randP := rand.Int31n(5) + 1
-				attackPlayer = attackTeam.CurrGameTeam[Position(randP)]
-				defencePlayer = defenceTeam.CurrGameTeam[attackPlayer.Position]
-				g.WriteLog(lastAttackPlayer.Name + "传给了" + attackPlayer.Name)
+				v := attackTeam.CurrGameTeam[Position(randP)]
+				if attackPlayer == v {
+					continue
+				}
+				if v.Score/2 > float64(rand.Int31n(100)) {
+					attackPlayer = attackTeam.CurrGameTeam[Position(randP)]
+					defencePlayer = defenceTeam.CurrGameTeam[attackPlayer.Position]
+					//g.WriteLog(lastAttackPlayer.FullName + "传给了" + attackPlayer.FullName+"("+PositionM[attackPlayer.Position]+")")
+					passok = true
+					break
+				}
 			}
 
 			//是否突破
+			if !passok {
+				g.WriteLog(attackPlayer.FullName + "继续运球")
+			}
 
 		}
 	}
@@ -249,8 +284,20 @@ func (g *Game) Play() {
 			v2.Player.Data.ScorePG = float32(v2.Player.Data.Score) / float32(v2.Player.Data.GameCount)
 			v2.Player.Data.FG = float32(v2.Player.Data.ShootIn*100) / float32(v2.Player.Data.Shoot)
 		}
+		v.Team.Data.Score += v.Score
+		v.Team.Data.GameCount++
+		if v.IsWin {
+			v.Team.Data.WinCount++
+		}
+		v.Team.Data.Shoot += v.Shoot
+		v.Team.Data.ShootIn += v.ShootIn
+		v.Team.Data.Reb += v.Reb
+		v.Team.Data.Steal += v.Steal
+		v.Team.Data.Block += v.Block
+		v.Team.Data.ScorePG = float32(v.Team.Data.Score) / float32(v.Team.Data.GameCount)
+		v.Team.Data.FG = float32(v.Team.Data.ShootIn*100) / float32(v.Team.Data.Shoot)
+
 	}
-	g.WriteLog("over")
 	//报告
 
 	if g.ShowLog {
@@ -269,11 +316,11 @@ func (g *Game) Play() {
 		for _, v := range g.GameResult.TeamResult {
 			fmt.Println(tr1.Team.Name, "球员数据：\n位置\t球员\t得分\t命中率\t篮板\t盖帽")
 			for _, v2 := range v.GamePlayerResult {
-				fmt.Printf("%s\t%s\t%d\t%d\t%d\t%d\n",
+				fmt.Printf("%s\t%s\t%d\t%.2f\t%d\t%d\n",
 					PositionM[v2.Player.Position],
 					v2.Player.Name,
 					v2.Score,
-					v2.ShootIn*100/v2.Shoot,
+					float64(v2.ShootIn)*100/float64(v2.Shoot),
 					v2.Reb,
 					v2.Block,
 				)
@@ -285,4 +332,5 @@ func (g *Game) Play() {
 		fmt.Println()
 	}
 
+	g.WriteLog("over")
 }
